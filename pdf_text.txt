@@ -1,0 +1,376 @@
+Reinforcement Learning Cheat Sheet
+Agent-Environment Interface
+The Agent at each step t receives a representation of the
+environment’s state, St ∈S and it selects an action At ∈A(s).
+Then, as a consequence of its action the agent receives a
+reward, Rt+1 ∈R ∈R.
+Policy
+A policy is a mapping from a state to an action
+πt(s|a)
+(1)
+That is the probability of select an action At = a if St = s.
+Reward
+The total reward is expressed as:
+Gt =
+H
+X
+k=0
+γkrt+k+1
+(2)
+Where γ is the discount factor and H is the horizon, that can
+be inﬁnite.
+Markov Decision Process
+A Markov Decision Process, MPD, is a 5-tuple
+(S, A, P, R, γ) where:
+ﬁnite set of states:
+s ∈S
+ﬁnite set of actions:
+a ∈A
+state transition probabilities:
+p(s′|s, a) = Pr{St+1 = s′|St = s, At = a}
+expected reward for state-action-nexstate:
+r(s′, s, a) = E[Rt+1|St+1 = s′, St = s, At = a]
+(3)
+Value Function
+Value function describes how good is to be in a speciﬁc state s
+under a certain policy π. For MDP:
+Vπ(s) = E[Gt|St = s]
+(4)
+Informally, is the expected return (expected cumulative
+discounted reward) when starting from s and following π
+Optimal
+V∗(s) = max
+π
+Vπ(s)
+(5)
+Action-Value (Q) Function
+We can also denoted the expected reward for state, action
+pairs.
+qπ(s, a) = Eπ
+Gt|St = s, At = a
+(6)
+Optimal
+The optimal value-action function:
+q∗(s, a) = max
+π
+qπ(s, a)
+(7)
+Clearly, using this new notation we can redeﬁne V ∗, equation
+5, using q∗(s, a), equation 7:
+V∗(s) = max
+a∈A(s) qπ∗(s, a)
+(8)
+Intuitively, the above equation express the fact that the value
+of a state under the optimal policy must be equal to the
+expected return from the best action from that state.
+Bellman Equation
+An important recursive property emerges for both Value (4)
+and Q (6) functions if we expand them.
+Value Function
+Vπ(s)
+= Eπ
+Gt|St = s
+= Eπ
+ ∞
+P
+k=0
+γkRt+k+1|St = s
+
+= Eπ
+
+Rt+1 + γ
+∞
+P
+k=0
+γkRt+k+2|St = s
+
+=
+X
+a
+π(a|s)
+X
+s′
+X
+r
+p(s′, r|s, a)
+|
+{z
+}
+Sum of all probabilities ∀possible r
+
+
+r + γ Eπ
+ ∞
+P
+k=0
+γkRt+k+2|St+1 = s′
+
+|
+{z
+}
+Expected reward from st+1
+
+
+= P
+a
+π(a|s) P
+s′
+P
+r
+p(s′, r|s, a)
+r + γVπ(s′)
+(9)
+Similarly, we can do the same for the Q function:
+qπ(s, a)
+= Eπ
+Gt|St = s, At = a
+= Eπ
+ ∞
+P
+k=0
+γkRt+k+1|St = s, At = a
+
+= Eπ
+
+Rt+1 + γ
+∞
+P
+k=0
+γkRt+k+2|St = s, At = a
+
+= P
+s′,r
+p(s′, r|s, a)
+
+r + γEπ
+ ∞
+P
+k=0
+γkRt+k+2|St+1 = s′
+
+= P
+s′,r
+p(s′, r|s, a)
+r + γVπ(s′)
+(10)
+Dynamic Programming
+Taking advantages of the subproblem structure of the V and Q
+function we can ﬁnd the optimal policy by just planning
+Policy Iteration
+We can now ﬁnd the optimal policy
+1. Initialisation
+V (s) ∈R, (e.g V (s) = 0) and π(s) ∈A for all s ∈S,
+∆←0
+2. Policy Evaluation
+while ∆≥θ (a small positive number) do
+foreach s ∈S do
+v ←V (s)
+V (s) ←P
+a
+π(a|s) P
+s′,r
+p(s′, r|s, a)
+r + γV (s′)
+∆←max(∆, |v −V (s)|)
+end
+end
+3. Policy Improvement
+policy-stable ←true
+foreach s ∈S do
+old-action ←π(s)
+π(s) ←argmax
+a
+P
+s′,r
+p(s′, r|s, a)
+r + γV (s′)
+policy-stable ←old-action = π(s)
+end
+if policy-stable return V ≈V∗and π ≈π∗, else go to 2
+Algorithm 1: Policy Iteration
+Value Iteration
+We can avoid to wait until V (s) has converged and instead do
+policy improvement and truncated policy evaluation step in
+one operation
+Initialise V (s) ∈R, e.gV (s) = 0
+∆←0
+while ∆≥θ (a small positive number) do
+foreach s ∈S do
+v ←V (s)
+V (s) ←max
+a
+P
+s′,r
+p(s′, r|s, a)
+r + γV (s′)
+∆←max(∆, |v −V (s)|)
+end
+end
+ouput: Deterministic policy π ≈π∗such that
+π(s) = argmax
+a
+P
+s′,r
+p(s′, r|s, a)
+r + γV (s′)
+Algorithm 2: Value Iteration
+Monte Carlo Methods
+Monte Carlo (MC) is a Model Free method, It does not require
+complete knowledge of the environment. It is based on
+averaging sample returns for each state-action pair. The
+following algorithm gives the basic implementation
+Initialise for all s ∈S, a ∈A(s) :
+Q(s, a) ←arbitrary
+π(s) ←arbitrary
+Returns(s, a) ←empty list
+while forever do
+Choose S0 ∈S and A0 ∈A(S0), all pairs have
+probability > 0
+Generate an episode starting at S0, A0 following π
+foreach pair s, a appearing in the episode do
+G ←return following the ﬁrst occurrence of s, a
+Append G to Returns(s, a))
+Q(s, a) ←average(Returns(s, a))
+end
+foreach s in the episode do
+π(s) ←argmax
+a
+Q(s, a)
+end
+end
+Algorithm 3: Monte Carlo ﬁrst-visit
+For non-stationary problems, the Monte Carlo estimate for,
+e.g, V is:
+V (St) ←V (St) + α
+Gt −V (St)
+(11)
+Where α is the learning rate, how much we want to forget
+about past experiences.
+Sarsa
+Sarsa (State-action-reward-state-action) is a on-policy TD
+control. The update rule:
+Q(st, at) ←Q(st, at) + α [rt + γQ(st+1, at+1) −Q(st, at)]
+n-step Sarsa
+Deﬁne the n-step Q-Return
+q(n) = Rt+1 + γRt + 2 + . . . + γn−1Rt+n + γnQ(St+n)
+n-step Sarsa update Q(S, a) towards the n-step Q-return
+Q(st, at) ←Q(st, at) + α
+h
+q(n)
+t
+−Q(st, at)
+i
+Forward View Sarsa(λ)
+qλ
+t = (1 −λ)
+∞
+X
+n=1
+λn−1q(n)
+t
+Forward-view Sarsa(λ):
+Q(st, at) ←Q(st, at) + α
+h
+qλ
+t −Q(st, at)
+i
+Initialise Q(s, a) arbitrarily and
+Q(terminal −state, ) = 0
+foreach episode ∈episodes do
+Choose a from s using policy derived from Q (e.g.,
+ϵ-greedy)
+while s is not terminal do
+Take action a, observer r, s′
+Choose a′ from s′ using policy derived from Q
+(e.g., ϵ-greedy)
+Q(s, a) ←Q(s, a) + α
+r + γQ(s′, a′) −Q(s, a)
+s ←s′
+a ←a′
+end
+end
+Algorithm 4: Sarsa(λ)
+Temporal Diﬀerence - Q Learning
+Temporal Diﬀerence (TD) methods learn directly from raw
+experience without a model of the environment’s dynamics.
+TD substitutes the expected discounted reward Gt from the
+episode with an estimation:
+V (St) ←V (St) + α
+Rt+1 + γV (St+1) −V (St)
+(12)
+The following algorithm gives a generic implementation.
+Initialise Q(s, a) arbitrarily and
+Q(terminal −state, ) = 0
+foreach episode ∈episodes do
+while s is not terminal do
+Choose a from s using policy derived from Q
+(e.g., ϵ-greedy)
+Take action a, observer r, s′
+Q(s, a) ←
+Q(s, a) + α
+h
+r + γ max
+a′
+Q(s′, a′) −Q(s, a)
+i
+s ←s′
+end
+end
+Algorithm 5: Q Learning
+Deep Q Learning
+Created by DeepMind, Deep Q Learning, DQL, substitutes
+the Q function with a deep neural network called Q-network.
+It also keep track of some observation in a memory in order to
+use them to train the network.
+Li(θi) = E(s,a,r,s′)∼U(D)
+
+
+(r + γ max
+a
+Q(s′, a′; θi−1)
+|
+{z
+}
+target
+−Q(s, a; θi)
+|
+{z
+}
+prediction
+)2
+
+(13)
+Where θ are the weights of the network and U(D) is the
+experience replay history.
+Initialise replay memory D with capacity N
+Initialise Q(s, a) arbitrarily
+foreach episode ∈episodes do
+while s is not terminal do
+With probability ϵ select a random action
+a ∈A(s)
+otherwise select a = maxa Q(s, a; θ)
+Take action a, observer r, s′
+Store transition (s, a, r, s′) in D
+Sample random minibatch of transitions
+(sj, aj, rj, s′
+j) from D
+Set yj ←
+(
+rj
+for terminal s′
+j
+rj + γ max
+a
+Q(s′, a′; θ)
+for non-terminal s′
+j
+Perform gradient descent step on
+(yj −Q(sj, aj; Θ))2
+s ←s′
+end
+end
+Algorithm 6: Deep Q Learning
+Copyright c⃝2018 Francesco Saverio Zuppichini
+https://github.com/FrancescoSaverioZuppichini/Reinforcement-
+Learning-Cheat-Sheet
+Double Deep Q Learning
