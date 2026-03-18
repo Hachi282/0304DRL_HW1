@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const evaluateBtn = document.getElementById('evaluate-btn');
+    const randomBtn = document.getElementById('random-btn');
+    const actionButtons = document.getElementById('action-buttons');
     const sizeInput = document.getElementById('grid-size');
     const interactiveGrid = document.getElementById('interactive-grid');
     const resultsSection = document.getElementById('results-section');
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         obstacles = [];
 
         obsCountSpan.innerText = maxObstacles;
-        evaluateBtn.style.display = 'none';
+        actionButtons.style.display = 'none';
         resultsSection.style.display = 'none';
 
         // Dynamic scaling logic
@@ -96,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkReady() {
         if (startCell && endCell) {
-            evaluateBtn.style.display = 'block';
+            actionButtons.style.display = 'flex';
         }
     }
 
@@ -111,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     evaluateBtn.addEventListener('click', async () => {
         evaluateBtn.disabled = true;
+        randomBtn.disabled = true;
         evaluateBtn.innerText = 'Evaluating...';
 
         try {
@@ -140,7 +143,45 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(e);
         } finally {
             evaluateBtn.disabled = false;
-            evaluateBtn.innerText = 'Evaluate Policy';
+            randomBtn.disabled = false;
+            evaluateBtn.innerText = 'Optimal Policy';
+        }
+    });
+
+    randomBtn.addEventListener('click', async () => {
+        randomBtn.disabled = true;
+        evaluateBtn.disabled = true;
+        randomBtn.innerText = 'Evaluating...';
+
+        try {
+            const res = await fetch('/evaluate-random', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    n: currentN,
+                    start: startCell,
+                    end: endCell,
+                    obstacles: obstacles,
+                    gamma: parseFloat(gammaInput.value),
+                    step_reward: parseFloat(stepRewardInput.value),
+                    goal_reward: parseFloat(goalRewardInput.value)
+                })
+            });
+            const data = await res.json();
+
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            renderResults(data.value_matrix, data.policy_matrix, data.optimal_path);
+        } catch (e) {
+            alert('Simulation failed. Make sure the Flask server is running.');
+            console.error(e);
+        } finally {
+            randomBtn.disabled = false;
+            evaluateBtn.disabled = false;
+            randomBtn.innerText = 'Random Policy';
         }
     });
 

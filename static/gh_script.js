@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const evaluateBtn = document.getElementById('evaluate-btn');
+    const randomBtn = document.getElementById('random-btn');
+    const actionButtons = document.getElementById('action-buttons');
     const sizeInput = document.getElementById('grid-size');
     const interactiveGrid = document.getElementById('interactive-grid');
     const resultsSection = document.getElementById('results-section');
@@ -30,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         obstacles = [];
 
         obsCountSpan.innerText = maxObstacles;
-        evaluateBtn.style.display = 'none';
+        actionButtons.style.display = 'none';
         resultsSection.style.display = 'none';
 
         // Dynamic scaling logic
@@ -96,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkReady() {
         if (startCell && endCell) {
-            evaluateBtn.style.display = 'block';
+            actionButtons.style.display = 'flex';
         }
     }
 
@@ -111,10 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     evaluateBtn.addEventListener('click', () => {
         evaluateBtn.disabled = true;
+        randomBtn.disabled = true;
         evaluateBtn.innerText = 'Evaluating...';
 
         try {
-            // Replicate Python's evaluate_random_policy via JavaScript purely for GitHub Pages
             const results = runValueIteration(
                 currentN, 
                 startCell, 
@@ -131,9 +133,96 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(e);
         } finally {
             evaluateBtn.disabled = false;
-            evaluateBtn.innerText = 'Evaluate Policy';
+            randomBtn.disabled = false;
+            evaluateBtn.innerText = 'Optimal Policy';
         }
     });
+
+    randomBtn.addEventListener('click', () => {
+        randomBtn.disabled = true;
+        evaluateBtn.disabled = true;
+        randomBtn.innerText = 'Evaluating...';
+
+        try {
+            const results = runRandomPolicyEvaluation(
+                currentN, 
+                startCell, 
+                endCell, 
+                obstacles,
+                parseFloat(gammaInput.value),
+                parseFloat(stepRewardInput.value),
+                parseFloat(goalRewardInput.value)
+            );
+            
+            renderResults(results.value_matrix, results.policy_matrix, results.optimal_path);
+        } catch (e) {
+            alert('Simulation failed computationally.');
+            console.error(e);
+        } finally {
+            randomBtn.disabled = false;
+            evaluateBtn.disabled = false;
+            randomBtn.innerText = 'Random Policy';
+        }
+    });
+
+    // JavaScript Random Policy Engine
+    function runRandomPolicyEvaluation(n, start_rc, end_rc, obstacles, gamma, step_reward, goal_reward, theta = 1e-4) {
+        const ACTIONS = ['U', 'D', 'L', 'R'];
+        const ACTION_MAP = { 'U': [-1, 0], 'D': [1, 0], 'L': [0, -1], 'R': [0, 1] };
+        const obstaclesSet = new Set(obstacles.map(o => `${o[0]},${o[1]}`));
+        const endStr = `${end_rc[0]},${end_rc[1]}`;
+        let V = Array.from({ length: n }, () => Array(n).fill(0.0));
+        let policy = {};
+        for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+                let stateStr = `${r},${c}`;
+                if (stateStr !== endStr && !obstaclesSet.has(stateStr)) {
+                    policy[stateStr] = ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
+                }
+            }
+        }
+        while (true) {
+            let delta = 0.0;
+            let V_new = V.map(row => [...row]);
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    let stateStr = `${r},${c}`;
+                    if (stateStr === endStr || obstaclesSet.has(stateStr)) continue;
+                    let action = policy[stateStr];
+                    let [dr, dc] = ACTION_MAP[action];
+                    let nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nr >= n || nc < 0 || nc >= n || obstaclesSet.has(`${nr},${nc}`)) {
+                        nr = r; nc = c;
+                    }
+                    let is_goal = (`${nr},${nc}` === endStr);
+                    let r_val = is_goal ? goal_reward : step_reward;
+                    let future_v = is_goal ? 0.0 : V[nr][nc];
+                    V_new[r][c] = r_val + gamma * future_v;
+                    delta = Math.max(delta, Math.abs(V_new[r][c] - V[r][c]));
+                }
+            }
+            V = V_new;
+            if (delta < theta) break;
+        }
+        let value_matrix = Array.from({ length: n }, () => Array(n).fill(null));
+        let policy_matrix = Array.from({ length: n }, () => Array(n).fill(null));
+        for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+                let stateStr = `${r},${c}`;
+                if (stateStr === endStr) {
+                    value_matrix[r][c] = "0.00";
+                    policy_matrix[r][c] = "End";
+                } else if (obstaclesSet.has(stateStr)) {
+                    value_matrix[r][c] = "";
+                    policy_matrix[r][c] = "Obstacle";
+                } else {
+                    value_matrix[r][c] = V[r][c].toFixed(2);
+                    policy_matrix[r][c] = policy[stateStr] || "";
+                }
+            }
+        }
+        return { value_matrix, policy_matrix, optimal_path: [] };
+    }
 
     // JavaScript Core Policy Evaluation Engine
     function runValueIteration(n, start_rc, end_rc, obstacles, gamma, step_reward, goal_reward, theta = 1e-4) {

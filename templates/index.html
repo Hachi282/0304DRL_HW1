@@ -45,8 +45,10 @@
         <main>
             <div class="grid-section">
                 <div id="interactive-grid" class="grid"></div>
-                <button id="evaluate-btn" class="primary-btn evaluate-btn" style="display: none;">Evaluate
-                    Policy</button>
+                <div id="action-buttons" style="display: none; gap: 1rem; width: 100%; margin-top: 1rem;">
+                    <button id="random-btn" class="primary-btn" style="flex: 1; background-color: #64748b;">Random Policy</button>
+                    <button id="evaluate-btn" class="primary-btn" style="flex: 1;">Optimal Policy</button>
+                </div>
             </div>
 
             <div id="results-section" class="results-section" style="display: none;">
